@@ -24,6 +24,7 @@ import sys
 from utils import *
 from camera import *
 import math
+from PIL import Image
 
 # These parameters describe window properties
 win_width = 800
@@ -52,6 +53,14 @@ LIGHT_BOTTOM = -5
 bullet_distance = 0
 time = 0
 brightness = 1.0
+
+# Checkerboard dimensions (texture dimensions are powers of 2)
+NROWS = 64
+NCOLS = 64
+
+# Plane dimensions (not airplane - just a flat sheet)
+PLANE_WIDTH = 10
+PLANE_HEIGHT = 10
 
 # These parameters are flags that can be turned on and off (for effect)
 animate = False
@@ -87,7 +96,7 @@ def main():
 
 def init():
     """Perform basic OpenGL initialization."""
-    global tube, ball
+    global tube, ball, faceTextureName, woodTextureName
     tube = gluNewQuadric()
     gluQuadricDrawStyle(tube, GLU_FILL)
     ball = gluNewQuadric()
@@ -97,6 +106,10 @@ def init():
     glEnable(GL_LIGHTING)
     glEnable(GL_NORMALIZE)    # Inefficient...
     glEnable(GL_DEPTH_TEST)   # For z-buffering!
+
+    generateCheckerBoardTexture()
+    faceTextureName = loadImageTexture("brick.jpg")
+    woodTextureName = loadImageTexture("wood.jpg")
 
 def display():
     """Display the current scene."""
@@ -186,7 +199,8 @@ def keyboard(key, x, y):
         glutPostRedisplay()
     elif key == b'q':
         # Go up
-        camera.slide(0, 1, 0)
+        #camera.slide(0, 1, 0)
+        camera.turn(1)
         glutPostRedisplay()
     elif key == b'e':
         # Go down
@@ -199,6 +213,8 @@ def keyboard(key, x, y):
         global is_light_on
         is_light_on = not is_light_on
         glutPostRedisplay()
+    elif key == b'h':
+        print("Help Message add more later")
     elif key == b'1':
         global use_smooth
         use_smooth = not use_smooth
@@ -235,6 +251,37 @@ def keyboard(key, x, y):
         light_height += light_height_dy
         glutPostRedisplay()
 
+def drawPlane(width, height, texture):
+    """ Draw a textured plane of the specified dimension. """
+    glBindTexture(GL_TEXTURE_2D, texture)
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL)  # try GL_DECAL/GL_REPLACE/GL_MODULATE
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)  # try GL_NICEST/GL_FASTEST
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)  # try GL_CLAMP/GL_REPEAT/GL_CLAMP_TO_EDGE
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)  # try GL_LINEAR/GL_NEAREST
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+
+    # Enable/Disable each time or OpenGL ALWAYS expects texturing!
+    glEnable(GL_TEXTURE_2D)
+
+    ex = width / 2
+    sx = -ex
+    ey = height
+    sy = 0
+    glBegin(GL_QUADS)
+    glNormal3f(0, 0, 1)
+    glTexCoord2f(0, 0)
+    glVertex3f(sx, sy, 0)
+    glTexCoord2f(2, 0)
+    glVertex3f(ex, sy, 0)
+    glTexCoord2f(2, 2)
+    glVertex3f(ex, ey, 0)
+    glTexCoord2f(0, 2)
+    glVertex3f(sx, ey, 0)
+    glEnd()
+
+    glDisable(GL_TEXTURE_2D)
+
 def reshape(w, h):
     """Handle window reshaping events."""
     global win_width, win_height
@@ -264,29 +311,66 @@ def draw_scene():
 
 def draw_objects():
     """Draw the objects in the scene: cylinders, spheres, and floor."""
-    if floor_option == 1:
-        # Draw a floor with bad lighting effects.
-        draw_floor(30, 2)
-    elif floor_option == 2:
-        # Draw a floor with improved lighting effects.
-        draw_floor(30, 30)
-    elif floor_option == 3:
-        # Draw a wavy floor with decent lighting.
-        draw_floor(30, 30, wave)
-    else:
-        # Draw a nice wavy floor with proper surface normals.
-        draw_floor(30, 30, wave, set_normal_wave)
-    
+    # if floor_option == 1:
+    #     # Draw a floor with bad lighting effects.
+    #     draw_floor(30, 2)
+    # elif floor_option == 2:
+    #     # Draw a floor with improved lighting effects.
+    #     draw_floor(30, 30)
+    # elif floor_option == 3:
+    #     # Draw a wavy floor with decent lighting.
+    #     draw_floor(30, 30, wave)
+    # else:
+    #     # Draw a nice wavy floor with proper surface normals.
+    #     draw_floor(30, 30, wave, set_normal_wave)
+    #
+    # glPushMatrix()
+    # glTranslated(0, 6, 0)
+    # set_copper(GL_FRONT)   # Make material attributes mimic copper.
+    # gluCylinder(tube, 3, 3, 10, 10, 10)
+    # gluCylinder(tube, 3, 1, 10, 10, 10)
+    # glPushMatrix()
+    # glTranslated(0, 0, bullet_distance)
+    # glScaled(1, 1, 2)
+    # gluSphere(ball, 0.9, 10, 10)
+
     glPushMatrix()
-    glTranslated(0, 6, 0)
-    set_copper(GL_FRONT)   # Make material attributes mimic copper.
-    gluCylinder(tube, 3, 3, 10, 10, 10)
-    gluCylinder(tube, 3, 1, 10, 10, 10)
+
     glPushMatrix()
-    glTranslated(0, 0, bullet_distance)
-    glScaled(1, 1, 2)
-    gluSphere(ball, 0.9, 10, 10)
+    drawFloor(PLANE_WIDTH, PLANE_HEIGHT, checkerBoardName)
     glPopMatrix()
+
+    glPushMatrix()
+    glRotated(90, 0, 1, 0)
+    glTranslated(0, 0, 5)
+    drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
+    glPopMatrix()
+
+    glPushMatrix()
+    glRotated(90, 0, 1, 0)
+    glTranslated(0, 0, -5)
+    drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
+    glPopMatrix()
+
+    glPushMatrix()
+    glRotated(180, 0, 1, 0)
+    glTranslated(0, 0, 5)
+    drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
+    glPopMatrix()
+
+    # fourth wall but blocks view so commented out for now
+    # glPushMatrix()
+    # glRotated(180, 0, 1, 0)
+    # glTranslated(0, 0, -5)
+    # drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
+    # glPopMatrix()
+
+    glPushMatrix()
+    glTranslated(0, 1, 0)
+    glScaled(3, .5, 2)
+    glutSolidCube(1.0)
+    glPopMatrix()
+
     glPopMatrix()
 
 def wave(x, z):
@@ -306,66 +390,97 @@ def set_normal_wave(x, z):
     glNormal3f(-0.25*math.cos(x+time*0.01), 1, 
                -0.25*math.cos(z+time*0.001))
 
-def draw_floor(size, divisions=1, f=None, df=None):
-    """Draws a floor of a given size and type.
+# def draw_floor(size, divisions=1, f=None, df=None):
+#     """Draws a floor of a given size and type.
+#
+#     Keyword arguments:
+#     size -- Size of the floor (size x size grid, centered at origin)
+#     divisions -- Number of divisions (default 1)
+#     f -- Function to apply for the "y-height" (default None => y=0)
+#     df -- Procedure to set the normal based on function f (default None)
+#
+#     A larger number of divisions great improves quality of the floor.
+#     If df is None then the normal is set to point directly up.
+#     """
+#     # Be sure we are talking about correct matrix.
+#     glMatrixMode(GL_MODELVIEW)
+#     glPushMatrix()
+#
+#     # Make the floor mimic Pewter material.
+#     set_pewter(GL_FRONT_AND_BACK)
+#
+#     step = size / divisions
+#     if f is None:
+#         glNormal3f(0, 1, 0)        # Use a vertical normal.
+#         glBegin(GL_QUADS)
+#         for i in range(0, divisions):
+#             x = -size/2 + i*step
+#             for j in range(0, divisions):
+#                 z = -size/2 + j*step
+#                 glVertex3f(x,0,z+step)
+#                 glVertex3f(x+step,0,z+step)
+#                 glVertex3f(x+step,0,z)
+#                 glVertex3f(x,0,z)
+#         glEnd()
+#     elif df is None:
+#         glNormal3f(0, 1, 0)        # Use a vertical normal.
+#         glBegin(GL_QUADS)
+#         for i in range(0, divisions):
+#             x = -size/2 + i*step
+#             for j in range(0, divisions):
+#                 z = -size/2 + j*step
+#                 glVertex3f(x,f(x,z+step),z+step)
+#                 glVertex3f(x+step,f(x+step,z+step),z+step)
+#                 glVertex3f(x+step,f(x+step,z),z)
+#                 glVertex3f(x,f(x,z),z)
+#         glEnd()
+#     else:
+#         for i in range(0, divisions):
+#             glBegin(GL_QUAD_STRIP)  # QUAD_STRIPS are more efficient.
+#             x = -size/2 + i*step
+#             for j in range(0, divisions):
+#                 z = -size/2 + j*step
+#                 df(x+step, z)
+#                 glVertex3f(x+step,f(x+step,z),z)
+#                 df(x, z)
+#                 glVertex3f(x,f(x,z),z)
+#             df(x+step, size/2)
+#             glVertex3f(x+step,f(x+step,size/2),size/2)
+#             df(x, size/2)
+#             glVertex3f(x,f(x,size/2),size/2)
+#             glEnd()
+#     glPopMatrix()
 
-    Keyword arguments:
-    size -- Size of the floor (size x size grid, centered at origin)
-    divisions -- Number of divisions (default 1)
-    f -- Function to apply for the "y-height" (default None => y=0)
-    df -- Procedure to set the normal based on function f (default None)
-    
-    A larger number of divisions great improves quality of the floor.
-    If df is None then the normal is set to point directly up.
-    """
-    # Be sure we are talking about correct matrix.
-    glMatrixMode(GL_MODELVIEW)
-    glPushMatrix()
+def drawFloor(width, height, texture):
+    """ Draw a textured floor of the specified dimension. """
+    glBindTexture(GL_TEXTURE_2D, texture)
+    glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE)  # try GL_DECAL/GL_REPLACE/GL_MODULATE
+    glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)  # try GL_NICEST/GL_FASTEST
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)  # try GL_CLAMP/GL_REPEAT/GL_CLAMP_TO_EDGE
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)  # try GL_LINEAR/GL_NEAREST
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
 
-    # Make the floor mimic Pewter material.
-    set_pewter(GL_FRONT_AND_BACK)   
+    sx = width / 2
+    ex = -sx
+    sz = height / 2
+    ez = -sz
 
-    step = size / divisions
-    if f is None:
-        glNormal3f(0, 1, 0)        # Use a vertical normal.
-        glBegin(GL_QUADS)
-        for i in range(0, divisions):
-            x = -size/2 + i*step
-            for j in range(0, divisions):
-                z = -size/2 + j*step
-                glVertex3f(x,0,z+step)
-                glVertex3f(x+step,0,z+step)
-                glVertex3f(x+step,0,z)
-                glVertex3f(x,0,z)
-        glEnd()
-    elif df is None:
-        glNormal3f(0, 1, 0)        # Use a vertical normal.
-        glBegin(GL_QUADS)
-        for i in range(0, divisions):
-            x = -size/2 + i*step
-            for j in range(0, divisions):
-                z = -size/2 + j*step
-                glVertex3f(x,f(x,z+step),z+step)
-                glVertex3f(x+step,f(x+step,z+step),z+step)
-                glVertex3f(x+step,f(x+step,z),z)
-                glVertex3f(x,f(x,z),z)
-        glEnd()
-    else:
-        for i in range(0, divisions):
-            glBegin(GL_QUAD_STRIP)  # QUAD_STRIPS are more efficient.
-            x = -size/2 + i*step
-            for j in range(0, divisions):
-                z = -size/2 + j*step
-                df(x+step, z)
-                glVertex3f(x+step,f(x+step,z),z)
-                df(x, z)
-                glVertex3f(x,f(x,z),z)
-            df(x+step, size/2)
-            glVertex3f(x+step,f(x+step,size/2),size/2)
-            df(x, size/2)
-            glVertex3f(x,f(x,size/2),size/2)
-            glEnd()
-    glPopMatrix()
+    # Enable/Disable each time or OpenGL ALWAYS expects texturing!
+    glEnable(GL_TEXTURE_2D)
+
+    glBegin(GL_QUADS)
+    glTexCoord2f(0, 0)
+    glVertex3f(sx, 0, sz)
+    glTexCoord2f(0, 1)
+    glVertex3f(sx, 0, ez)
+    glTexCoord2f(1, 1)
+    glVertex3f(ex, 0, ez)
+    glTexCoord2f(1, 0)
+    glVertex3f(ex, 0, sz)
+    glEnd()
+
+    glDisable(GL_TEXTURE_2D)
 
 def place_main_light():
     """Set up the main light."""
@@ -374,37 +489,41 @@ def place_main_light():
     ly = light_height
     lz = 1.0
     light_position = [ lx, ly, lz, 1.0 ]
-    light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    light_ambient = [0.0, 0, 0.15, 1] #blue
+    light_diffuse = [0.4, 0.4, 0.6, 1] #blue
+    light_specular = [0.0, 0, 0.8, 1] #blue
     light_direction = [ 1.0, -1.0, 1.0, 0.0 ]  # Light points down
 
+
     # For Light 0, set position, ambient, diffuse, and specular values
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position)
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient)
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse)
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular)
+    glLightfv(GL_LIGHT1, GL_POSITION, light_position)
+    glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient)
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse)
+    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular)
 
     # Constant attenuation (for distance, etc.)
     # Only works for fixed light locations!  Otherwise disabled
-    glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0)
-    glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0)
-    glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0)
+    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0)
+    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
+    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
     
     # Create a spotlight effect (none at the moment)
     if use_spotlight:
-        glLightf(GL_LIGHT0, GL_SPOT_CUTOFF,45.0)
-        glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 0.0)
-        glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, light_direction)
+        glLightf(GL_LIGHT1, GL_SPOT_CUTOFF,45.0)
+        glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.0)
+        glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_direction)
     else:
-        glLightf(GL_LIGHT0, GL_SPOT_CUTOFF,180.0)
-        glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 0.0)
+        glLightf(GL_LIGHT1, GL_SPOT_CUTOFF,180.0)
+        glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.0)
     
     glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, use_lv)
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
     #  Try GL_TRUE - but then watch what happens when light is low
     
-    glEnable(GL_LIGHT0)
+    glEnable(GL_LIGHT1)
 
     # This part draws a SELF-COLORED sphere (in spot where light is!)
     glPushMatrix()
@@ -444,5 +563,47 @@ def set_pewter(face):
     glMaterialfv(face, GL_DIFFUSE, diffuse);
     glMaterialfv(face, GL_SPECULAR, specular);
     glMaterialf(face, GL_SHININESS, shininess);
+
+def generateCheckerBoardTexture():
+    """
+    * Generate a texture in the form of a checkerboard
+    * Why?  Simple to do...
+    """
+    global checkerBoardName
+    texture = [0] * (NROWS * NCOLS * 4)
+    for i in range(NROWS):
+        for j in range(NCOLS):
+            c = 135 if ((i & 8) ^ (j & 8)) else 255
+            idx = (i * NCOLS + j) * 4
+            texture[idx] = c  # Red
+            texture[idx + 1] = c  # Green
+            texture[idx + 2] = c  # Blue
+            texture[idx + 3] = 150  # Alpha (transparency)
+
+    # Generate a "name" for the texture.
+    # Bind this texture as current active texture
+    # and sets the parameters for this texture.
+    checkerBoardName = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, checkerBoardName)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, NCOLS, NROWS, 0, GL_RGBA,
+                 GL_UNSIGNED_BYTE, texture)
+
+def loadImageTexture(filename):
+    # Load the image from the file and return as a texture
+    im = Image.open(filename)
+    print("Concrete dimensions: {0}".format(im.size))  # If you want to see the image's original dimensions
+    # dim = 128
+    # size = (0,0,dim,dim)
+    # texture = im.crop(size).tobytes("raw")   # The cropped texture
+    texture = im.tobytes("raw")  # The cropped texture
+    dimX = im.size[0]
+    dimY = im.size[1]
+
+    returnTextureName = glGenTextures(1)
+    glBindTexture(GL_TEXTURE_2D, returnTextureName)
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, dimX, dimY, 0, GL_RGB,
+                 GL_UNSIGNED_BYTE, texture)
+    return returnTextureName
+
 
 if __name__ == '__main__': main()
