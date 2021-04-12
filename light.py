@@ -370,8 +370,20 @@ def draw_objects():
     glPopMatrix()
 
     glPushMatrix()
-    glTranslated(0, 1, 0)
-    glScaled(3, .5, 2)
+    glTranslated(0, 1, -2.5)
+    glRotated(90,1,0,0)
+    drawPlane(10, 5, woodTextureName)
+    glPopMatrix()
+
+    #glPushMatrix()
+    #glTranslated(0,.5,0)
+    #glScale(10,1,5)
+    #glutWireCube(1.0)
+    #glPopMatrix()
+
+    glPushMatrix()
+    glTranslated(0,.5,0)
+    glScale(5,1,2.5)
     glutSolidCube(1.0)
     glPopMatrix()
 
