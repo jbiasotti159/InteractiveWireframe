@@ -59,8 +59,8 @@ NROWS = 64
 NCOLS = 64
 
 # Plane dimensions (not airplane - just a flat sheet)
-PLANE_WIDTH = 10
-PLANE_HEIGHT = 10
+PLANE_WIDTH = 30
+PLANE_HEIGHT = 30
 
 # These parameters are flags that can be turned on and off (for effect)
 animate = False
@@ -199,8 +199,8 @@ def keyboard(key, x, y):
         glutPostRedisplay()
     elif key == b'q':
         # Go up
-        #camera.slide(0, 1, 0)
-        camera.turn(1)
+        camera.slide(0, 1, 0)
+        #camera.turn(1)
         glutPostRedisplay()
     elif key == b'e':
         # Go down
@@ -301,8 +301,12 @@ def draw_scene():
     # Set up the main light (LIGHT0)... or not.
     if is_light_on:
         place_main_light()
+        place_red_light()
+        place_green_light()
     else:
         glDisable(GL_LIGHT0)
+        glDisable(GL_LIGHT1)
+        glDisable(GL_LIGHT2)
 
     # Now spin the world around the y-axis (for effect).
     glRotated(angle_movement, 0, 1, 0)
@@ -342,28 +346,28 @@ def draw_objects():
 
     glPushMatrix()
     glRotated(90, 0, 1, 0)
-    glTranslated(0, 0, 5)
+    glTranslated(0, 0, 15)
     drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
     glPopMatrix()
 
     glPushMatrix()
     glRotated(90, 0, 1, 0)
-    glTranslated(0, 0, -5)
+    glTranslated(0, 0, -15)
     drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
     glPopMatrix()
 
     glPushMatrix()
     glRotated(180, 0, 1, 0)
-    glTranslated(0, 0, 5)
+    glTranslated(0, 0, 15)
     drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
     glPopMatrix()
 
     # fourth wall but blocks view so commented out for now
-    # glPushMatrix()
-    # glRotated(180, 0, 1, 0)
-    # glTranslated(0, 0, -5)
-    # drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
-    # glPopMatrix()
+    glPushMatrix()
+    glRotated(180, 0, 1, 0)
+    glTranslated(0, 0, -15)
+    drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
+    glPopMatrix()
 
     glPushMatrix()
     glTranslated(0, 1, 0)
@@ -482,6 +486,136 @@ def drawFloor(width, height, texture):
 
     glDisable(GL_TEXTURE_2D)
 
+def place_red_light():
+    """Set up the main light."""
+    glMatrixMode(GL_MODELVIEW)
+    lx = 4.0
+    ly = light_height
+    lz = 2.0
+    light_position = [lx, ly, lz, 1.0]
+    # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    lightb_ambient = [0.0, 0, 1, 1]  # blue
+    lightr_ambient = [1.0, 0, 0, 1]  # red
+    lightg_ambient = [0, 1.0, 0, 1]  # green
+    lightb_diffuse = [0.4, 0.4, 0.6, 1]  # blue
+    lightb_specular = [0.0, 0, 0.8, 1]  # blue
+    light_direction = [1.0, -1.0, 1.0, 0.0]  # Light points down
+
+
+    # For Light 1 (red), set position, ambient, diffuse, and specular values
+    glLightfv(GL_LIGHT1, GL_POSITION, light_position)
+    glLightfv(GL_LIGHT1, GL_AMBIENT, lightr_ambient)
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightb_diffuse)
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightb_specular)
+
+    # For Light 2 (green), set position, ambient, diffuse, and specular values
+    # glLightfv(GL_LIGHT2, GL_POSITION, light_position)
+    # glLightfv(GL_LIGHT2, GL_AMBIENT, lightg_ambient)
+    # glLightfv(GL_LIGHT2, GL_DIFFUSE, lightb_diffuse)
+    # glLightfv(GL_LIGHT2, GL_SPECULAR, lightb_specular)
+
+    # Constant attenuation (for distance, etc.)
+    # Only works for fixed light locations!  Otherwise disabled
+    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 2.0)
+    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
+    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
+
+    # glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 3.0)
+    # glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.0)
+    # glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.0)
+
+    # Create a spotlight effect (none at the moment)
+    if use_spotlight:
+        glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 45.0)
+        glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.0)
+        glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_direction)
+    else:
+        glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 180.0)
+        glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.0)
+
+    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, use_lv)
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
+    #  Try GL_TRUE - but then watch what happens when light is low
+
+    glEnable(GL_LIGHT1)
+    #glEnable(GL_LIGHT2)
+
+    # This part draws a SELF-COLORED sphere (in spot where light is!)
+    glPushMatrix()
+    glTranslatef(lx, ly, lz)
+    glDisable(GL_LIGHTING)
+    glColor3f(brightness, 0, 0)
+    glutSolidSphere(0.5, 20, 20)
+    glEnable(GL_LIGHTING)
+    glPopMatrix()
+
+def place_green_light():
+    """Set up the main light."""
+    glMatrixMode(GL_MODELVIEW)
+    lx = 5.0
+    ly = light_height
+    lz = 3.0
+    light_position = [lx, ly, lz, 1.0]
+    # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    lightb_ambient = [0.0, 0, 1, 1]  # blue
+    lightr_ambient = [1.0, 0, 0, 1]  # red
+    lightg_ambient = [0, 1.0, 0, 1]  # green
+    lightb_diffuse = [0.4, 0.4, 0.6, 1]  # blue
+    lightb_specular = [0.0, 0, 0.8, 1]  # blue
+    light_direction = [1.0, -1.0, 1.0, 0.0]  # Light points down
+
+
+    # For Light 1 (red), set position, ambient, diffuse, and specular values
+    # glLightfv(GL_LIGHT1, GL_POSITION, light_position)
+    # glLightfv(GL_LIGHT1, GL_AMBIENT, lightr_ambient)
+    # glLightfv(GL_LIGHT1, GL_DIFFUSE, lightb_diffuse)
+    # glLightfv(GL_LIGHT1, GL_SPECULAR, lightb_specular)
+
+    # For Light 2 (green), set position, ambient, diffuse, and specular values
+    glLightfv(GL_LIGHT2, GL_POSITION, light_position)
+    glLightfv(GL_LIGHT2, GL_AMBIENT, lightg_ambient)
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, lightb_diffuse)
+    glLightfv(GL_LIGHT2, GL_SPECULAR, lightb_specular)
+
+    # Constant attenuation (for distance, etc.)
+    # Only works for fixed light locations!  Otherwise disabled
+    # glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 2.0)
+    # glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
+    # glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
+
+    glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 3.0)
+    glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.0)
+    glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.0)
+
+    # Create a spotlight effect (none at the moment)
+    if use_spotlight:
+        glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 45.0)
+        glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 0.0)
+        glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, light_direction)
+    else:
+        glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 180.0)
+        glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 0.0)
+
+    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, use_lv)
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
+    #  Try GL_TRUE - but then watch what happens when light is low
+
+
+    glEnable(GL_LIGHT2)
+
+    # This part draws a SELF-COLORED sphere (in spot where light is!)
+    glPushMatrix()
+    glTranslatef(lx, ly, lz)
+    glDisable(GL_LIGHTING)
+    glColor3f(0, brightness, 0)
+    glutSolidSphere(0.5, 20, 20)
+    glEnable(GL_LIGHTING)
+    glPopMatrix()
+
 def place_main_light():
     """Set up the main light."""
     glMatrixMode(GL_MODELVIEW)
@@ -492,38 +626,43 @@ def place_main_light():
     # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
     # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
     # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    light_ambient = [0.0, 0, 0.15, 1] #blue
-    light_diffuse = [0.4, 0.4, 0.6, 1] #blue
-    light_specular = [0.0, 0, 0.8, 1] #blue
+    lightb_ambient = [0.0, 0, 1, 1] #blue
+    lightr_ambient = [1.0, 0, 0, 1] #red
+    lightg_ambient = [0, 1.0, 0, 1] #green
+    lightb_diffuse = [0.4, 0.4, 0.6, 1] #blue
+    lightb_specular = [0.0, 0, 0.8, 1] #blue
     light_direction = [ 1.0, -1.0, 1.0, 0.0 ]  # Light points down
 
 
-    # For Light 0, set position, ambient, diffuse, and specular values
-    glLightfv(GL_LIGHT1, GL_POSITION, light_position)
-    glLightfv(GL_LIGHT1, GL_AMBIENT, light_ambient)
-    glLightfv(GL_LIGHT1, GL_DIFFUSE, light_diffuse)
-    glLightfv(GL_LIGHT1, GL_SPECULAR, light_specular)
+    # For Light 0 (blue), set position, ambient, diffuse, and specular values
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position)
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightb_ambient)
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightb_diffuse)
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightb_specular)
+
+
 
     # Constant attenuation (for distance, etc.)
     # Only works for fixed light locations!  Otherwise disabled
-    glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 1.0)
-    glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
-    glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
-    
+    glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, 1.0)
+    glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, 0.0)
+    glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, 0.0)
+
     # Create a spotlight effect (none at the moment)
     if use_spotlight:
-        glLightf(GL_LIGHT1, GL_SPOT_CUTOFF,45.0)
-        glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.0)
+        glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, 45.0)
+        glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 0.0)
         glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, light_direction)
     else:
-        glLightf(GL_LIGHT1, GL_SPOT_CUTOFF,180.0)
-        glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 0.0)
+        glLightf(GL_LIGHT0, GL_SPOT_CUTOFF,180.0)
+        glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, 0.0)
     
     glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, use_lv)
     glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
     #  Try GL_TRUE - but then watch what happens when light is low
     
-    glEnable(GL_LIGHT1)
+    glEnable(GL_LIGHT0)
+
 
     # This part draws a SELF-COLORED sphere (in spot where light is!)
     glPushMatrix()
