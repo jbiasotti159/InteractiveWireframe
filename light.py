@@ -29,13 +29,13 @@ from PIL import Image
 # These parameters describe window properties
 win_width = 800
 win_height = 800
-win_name = b'Lights, cameras, action!'
+win_name = b'Interactive Wireframe'
 
 # These parameters define the camera's lens shape and position
 CAM_NEAR = 0.01
 CAM_FAR = 1000.0
 CAM_ANGLE = 60.0
-INITIAL_EYE = Point(0, 2, 30)
+INITIAL_EYE = Point(0, 2, 15)
 INITIAL_LOOK_ANGLE = 0
 camera = Camera(CAM_ANGLE, win_width/win_height, CAM_NEAR, CAM_FAR, INITIAL_EYE, INITIAL_LOOK_ANGLE)
 
@@ -66,6 +66,7 @@ PLANE_HEIGHT = 30
 animate = False
 fire = False
 is_light_on = True
+headlamp_is_on = False
 exiting = False
 use_smooth = True
 lamp_light = True
@@ -160,19 +161,13 @@ def advance():
     elif angle_movement < 0:
         angle_movement += 360   # So angle doesn't get too small.
 
-    # Move the bullet - if fired.
-    if fire:
-        bullet_distance += BULLET_SPEED
-        if bullet_distance > CAM_FAR:
-            bullet_distance = 0
-            fire = False
         
 def special_keys(key, x, y):
     """Process any special keys that are pressed."""
     global angle_step
-    if key == GLUT_KEY_LEFT:
+    if key == GLUT_KEY_LEFT and angle_step < 1:
         angle_step += DEFAULT_STEP
-    elif key == GLUT_KEY_RIGHT:
+    elif key == GLUT_KEY_RIGHT and angle_step < -1:
         angle_step -= DEFAULT_STEP
 
 def keyboard(key, x, y):
@@ -217,7 +212,7 @@ def keyboard(key, x, y):
         is_light_on = not is_light_on
         glutPostRedisplay()
     elif key == b'h':
-        print("Help Message add more later")
+        print("SOS HELP: Press 0-5 to turn on and off all lights, WASD controls to move around the room")
     elif key == b'1':
         global blue_light
         blue_light = not blue_light
@@ -233,6 +228,10 @@ def keyboard(key, x, y):
     elif key == b'4':
         global lamp_light
         lamp_light = not lamp_light
+        glutPostRedisplay()
+    elif key == b'5':
+        global headlamp_is_on
+        headlamp_is_on = not headlamp_is_on
         glutPostRedisplay()
     elif key == b'-':
         # Move light down
@@ -309,6 +308,11 @@ def draw_scene():
     else:
         glDisable(GL_LIGHT3)
 
+    if headlamp_is_on:
+        place_headlamp_light()
+    else:
+        glDisable(GL_LIGHT4)
+
     # Now spin the world around the y-axis (for effect).
     glRotated(angle_movement, 0, 1, 0)
     draw_objects()
@@ -316,28 +320,6 @@ def draw_scene():
 
 def draw_objects():
     """Draw the objects in the scene: cylinders, spheres, and floor."""
-    # if floor_option == 1:
-    #     # Draw a floor with bad lighting effects.
-    #     draw_floor(30, 2)
-    # elif floor_option == 2:
-    #     # Draw a floor with improved lighting effects.
-    #     draw_floor(30, 30)
-    # elif floor_option == 3:
-    #     # Draw a wavy floor with decent lighting.
-    #     draw_floor(30, 30, wave)
-    # else:
-    #     # Draw a nice wavy floor with proper surface normals.
-    #     draw_floor(30, 30, wave, set_normal_wave)
-    #
-    # glPushMatrix()
-    # glTranslated(0, 6, 0)
-    # set_copper(GL_FRONT)   # Make material attributes mimic copper.
-    # gluCylinder(tube, 3, 3, 10, 10, 10)
-    # gluCylinder(tube, 3, 1, 10, 10, 10)
-    # glPushMatrix()
-    # glTranslated(0, 0, bullet_distance)
-    # glScaled(1, 1, 2)
-    # gluSphere(ball, 0.9, 10, 10)
 
     glPushMatrix()
 
@@ -363,7 +345,6 @@ def draw_objects():
     drawPlane(PLANE_WIDTH, PLANE_HEIGHT, faceTextureName)
     glPopMatrix()
 
-    # fourth wall but blocks view so commented out for now
     glPushMatrix()
     glRotated(180, 0, 1, 0)
     glTranslated(0, 0, -15)
@@ -407,97 +388,20 @@ def draw_objects():
     glPopMatrix()
 
     glPushMatrix()
-    glTranslated(1,1.1,1)
-    glScale(.1,.1,.1)
+    glTranslated(1, 1.1, 1)
+    glScale(.1, .1, .1)
     glutSolidCube(1.0)
     glPopMatrix()
 
     glPushMatrix()
-    glTranslated(1.1,1.1,1.2)
-    glScale(.1,.1,.1)
+    glTranslated(1.1, 1.1, 1.2)
+    glScale(.1, .1, .1)
     glutSolidCube(1.0)
     glPopMatrix()
 
-
     glPopMatrix()
 
-def wave(x, z):
-    """Returns a point on a 2-d "wave" trigonemtric function."""
-    return math.sin(x+time*0.01)*0.25 + math.sin(z+time*0.001)*0.25
 
-def set_normal_wave(x, z):
-    """Sets the normal of a point on the aforementioned wave.
-
-    The calculation is done using the derivatives of the wave function
-    and would need to be rewritten if wave function changes.
-
-    Keyword arguments:
-    x -- The x position on the "wave"
-    z -- The y position on the "wave"
-    """
-    glNormal3f(-0.25*math.cos(x+time*0.01), 1, 
-               -0.25*math.cos(z+time*0.001))
-
-# def draw_floor(size, divisions=1, f=None, df=None):
-#     """Draws a floor of a given size and type.
-#
-#     Keyword arguments:
-#     size -- Size of the floor (size x size grid, centered at origin)
-#     divisions -- Number of divisions (default 1)
-#     f -- Function to apply for the "y-height" (default None => y=0)
-#     df -- Procedure to set the normal based on function f (default None)
-#
-#     A larger number of divisions great improves quality of the floor.
-#     If df is None then the normal is set to point directly up.
-#     """
-#     # Be sure we are talking about correct matrix.
-#     glMatrixMode(GL_MODELVIEW)
-#     glPushMatrix()
-#
-#     # Make the floor mimic Pewter material.
-#     set_pewter(GL_FRONT_AND_BACK)
-#
-#     step = size / divisions
-#     if f is None:
-#         glNormal3f(0, 1, 0)        # Use a vertical normal.
-#         glBegin(GL_QUADS)
-#         for i in range(0, divisions):
-#             x = -size/2 + i*step
-#             for j in range(0, divisions):
-#                 z = -size/2 + j*step
-#                 glVertex3f(x,0,z+step)
-#                 glVertex3f(x+step,0,z+step)
-#                 glVertex3f(x+step,0,z)
-#                 glVertex3f(x,0,z)
-#         glEnd()
-#     elif df is None:
-#         glNormal3f(0, 1, 0)        # Use a vertical normal.
-#         glBegin(GL_QUADS)
-#         for i in range(0, divisions):
-#             x = -size/2 + i*step
-#             for j in range(0, divisions):
-#                 z = -size/2 + j*step
-#                 glVertex3f(x,f(x,z+step),z+step)
-#                 glVertex3f(x+step,f(x+step,z+step),z+step)
-#                 glVertex3f(x+step,f(x+step,z),z)
-#                 glVertex3f(x,f(x,z),z)
-#         glEnd()
-#     else:
-#         for i in range(0, divisions):
-#             glBegin(GL_QUAD_STRIP)  # QUAD_STRIPS are more efficient.
-#             x = -size/2 + i*step
-#             for j in range(0, divisions):
-#                 z = -size/2 + j*step
-#                 df(x+step, z)
-#                 glVertex3f(x+step,f(x+step,z),z)
-#                 df(x, z)
-#                 glVertex3f(x,f(x,z),z)
-#             df(x+step, size/2)
-#             glVertex3f(x+step,f(x+step,size/2),size/2)
-#             df(x, size/2)
-#             glVertex3f(x,f(x,size/2),size/2)
-#             glEnd()
-#     glPopMatrix()
 
 def drawFloor(width, height, texture):
     """ Draw a textured floor of the specified dimension. """
@@ -537,12 +441,8 @@ def place_blue_light():
     ly = light_height
     lz = 1.0
     light_position = [ lx, ly, lz, 1.0 ]
-    # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+
     lightb_ambient = [0.0, 0, 1, 1] #blue
-    lightr_ambient = [1.0, 0, 0, 1] #red
-    lightg_ambient = [0, 1.0, 0, 1] #green
     lightb_diffuse = [0.4, 0.4, 0.6, 1] #blue
     lightb_specular = [0.0, 0, 0.8, 1] #blue
     light_direction = [ 1.0, -1.0, 1.0, 0.0 ]  # Light points down
@@ -594,12 +494,7 @@ def place_red_light():
     ly = light_height
     lz = 2.0
     light_position = [lx, ly, lz, 1.0]
-    # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    lightb_ambient = [0.0, 0, 1, 1]  # blue
     lightr_ambient = [1.0, 0, 0, 1]  # red
-    lightg_ambient = [0, 1.0, 0, 1]  # green
     lightb_diffuse = [0.4, 0.4, 0.6, 1]  # blue
     lightb_specular = [0.0, 0, 0.8, 1]  # blue
     light_direction = [1.0, -1.0, 1.0, 0.0]  # Light points down
@@ -611,21 +506,11 @@ def place_red_light():
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightb_diffuse)
     glLightfv(GL_LIGHT1, GL_SPECULAR, lightb_specular)
 
-    # For Light 2 (green), set position, ambient, diffuse, and specular values
-    # glLightfv(GL_LIGHT2, GL_POSITION, light_position)
-    # glLightfv(GL_LIGHT2, GL_AMBIENT, lightg_ambient)
-    # glLightfv(GL_LIGHT2, GL_DIFFUSE, lightb_diffuse)
-    # glLightfv(GL_LIGHT2, GL_SPECULAR, lightb_specular)
-
     # Constant attenuation (for distance, etc.)
     # Only works for fixed light locations!  Otherwise disabled
     glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 2.0)
     glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
     glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
-
-    # glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 3.0)
-    # glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.0)
-    # glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, 0.0)
 
     # Create a spotlight effect (none at the moment)
     if red_light:
@@ -641,7 +526,6 @@ def place_red_light():
     #  Try GL_TRUE - but then watch what happens when light is low
 
     glEnable(GL_LIGHT1)
-    #glEnable(GL_LIGHT2)
 
     # This part draws a SELF-COLORED sphere (in spot where light is!)
     glPushMatrix()
@@ -659,34 +543,16 @@ def place_green_light():
     ly = light_height
     lz = 3.0
     light_position = [lx, ly, lz, 1.0]
-    # light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    # light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    # light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
-    lightb_ambient = [0.0, 0, 1, 1]  # blue
-    lightr_ambient = [1.0, 0, 0, 1]  # red
     lightg_ambient = [0, 1.0, 0, 1]  # green
     lightb_diffuse = [0.4, 0.4, 0.6, 1]  # blue
     lightb_specular = [0.0, 0, 0.8, 1]  # blue
     light_direction = [1.0, -1.0, 1.0, 0.0]  # Light points down
-
-
-    # For Light 1 (red), set position, ambient, diffuse, and specular values
-    # glLightfv(GL_LIGHT1, GL_POSITION, light_position)
-    # glLightfv(GL_LIGHT1, GL_AMBIENT, lightr_ambient)
-    # glLightfv(GL_LIGHT1, GL_DIFFUSE, lightb_diffuse)
-    # glLightfv(GL_LIGHT1, GL_SPECULAR, lightb_specular)
 
     # For Light 2 (green), set position, ambient, diffuse, and specular values
     glLightfv(GL_LIGHT2, GL_POSITION, light_position)
     glLightfv(GL_LIGHT2, GL_AMBIENT, lightg_ambient)
     glLightfv(GL_LIGHT2, GL_DIFFUSE, lightb_diffuse)
     glLightfv(GL_LIGHT2, GL_SPECULAR, lightb_specular)
-
-    # Constant attenuation (for distance, etc.)
-    # Only works for fixed light locations!  Otherwise disabled
-    # glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 2.0)
-    # glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
-    # glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
 
     glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, 3.0)
     glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, 0.0)
@@ -722,10 +588,9 @@ def place_lamp_light():
     lx = -0.7
     ly = 2.5
     lz = 0.8
-    light_position = [ lx, ly, lz, 1.0 ]
+    light_position = [ lx, ly, lz, 1.0]
     lightb_ambient = [1, 1, 1, 1]  # blue
-    lightr_ambient = [1, 1, 1, 1]  # red
-    lightg_ambient = [1, 1.0, 1, 1]  # green
+
     lightb_diffuse = [1, 1, 1, 1]  # blue
     lightb_specular = [1, 1, 1, 1]  # blue
     light_direction = [0.0, -1.0, 0.0, 1.0]  # Light points down
@@ -770,7 +635,68 @@ def place_lamp_light():
     glEnable(GL_LIGHTING)
     glPopMatrix()
     
+def place_headlamp_light():
+    """Set up the main light."""
 
+    lx = 1.0
+    ly = light_height
+    lz = 2.0
+    #light_position = [lx, ly, lz, 1.0]
+    light_position =  [0.0, 0.0, 0.0, 1]
+    light_ambient = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    light_diffuse = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    light_specular = [ 1*brightness, 1*brightness, 1*brightness, 1.0 ]
+    light_direction = [1.0, -1.0, 1.0, 0.0]  # Light points down
+    # glViewport(0, 0, win_width, win_height)
+    # glMatrixMode(GL_PROJECTION)
+    # glLoadIdentity()
+    # gluPerspective(40.0, float(win_width) / float(win_height), 0.01, 100.0)
+    #
+    # glMatrixMode(GL_MODELVIEW)
+    # glLoadIdentity()
+   # glPushMatrix()
+    glLightfv(GL_LIGHT4, GL_POSITION, light_position)
+
+
+
+    #glLightfv(GL_LIGHT4, GL_POSITION, (GLfloat * 4)(0.0, 0.0, 0.0, 1))
+    glLightfv(GL_LIGHT4, GL_AMBIENT, light_ambient)
+    glLightfv(GL_LIGHT4, GL_DIFFUSE, light_diffuse)
+    glLightfv(GL_LIGHT4, GL_SPECULAR, light_specular)
+
+    # Constant attenuation (for distance, etc.)
+    # Only works for fixed light locations!  Otherwise disabled
+    # glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, 2.0)
+    # glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, 0.0)
+    # glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, 0.0)
+
+    glLightf(GL_LIGHT4, GL_CONSTANT_ATTENUATION, 3.0)
+    glLightf(GL_LIGHT4, GL_LINEAR_ATTENUATION, 0.0)
+    glLightf(GL_LIGHT4, GL_QUADRATIC_ATTENUATION, 0.0)
+
+    # Create a spotlight effect (none at the moment)
+    if headlamp_is_on:
+        glLightf(GL_LIGHT4, GL_SPOT_CUTOFF, 30.0)
+        glLightf(GL_LIGHT4, GL_SPOT_EXPONENT, 0.0)
+        glLightfv(GL_LIGHT4, GL_SPOT_DIRECTION, light_direction)
+    else:
+        glLightf(GL_LIGHT4, GL_SPOT_CUTOFF, 180.0)
+        glLightf(GL_LIGHT4, GL_SPOT_EXPONENT, 0.0)
+
+    glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, use_lv)
+    glLightModeli(GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE)
+    #  Try GL_TRUE - but then watch what happens when light is low
+
+    glEnable(GL_LIGHT4)
+
+    # This part draws a SELF-COLORED sphere (in spot where light is!)
+    glPushMatrix()
+    glTranslatef(lx, ly, lz)
+    glDisable(GL_LIGHTING)
+    glColor3f(brightness, brightness, brightness)
+    glutSolidSphere(0.5, 20, 20)
+    glEnable(GL_LIGHTING)
+    glPopMatrix()
     
 def set_copper(face):
     """Set the material properties of the given face to "copper"-esque.
