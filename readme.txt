@@ -1,6 +1,8 @@
 Memebrs:
 James, Neel, Jill, Julia, Lauren, Joe
 
+In order to run the file, run Light.py
+
 Controls:
 W - Move forward
 A - look left
