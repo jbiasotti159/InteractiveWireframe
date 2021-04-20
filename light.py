@@ -53,6 +53,12 @@ LIGHT_BOTTOM = -5
 bullet_distance = 0
 time = 0
 brightness = 1.0
+tanBallX = 2.8
+silverBallX = -4
+speed = 0.01
+silverSpeed = 0.01
+diceAngle = 0
+counter = 0
 
 # Checkerboard dimensions (texture dimensions are powers of 2)
 NROWS = 64
@@ -75,6 +81,10 @@ blue_light = True
 green_light = True
 use_lv = GL_FALSE
 floor_option = 2
+animateTan = False
+animateSilver = False
+animateDice = False
+ANGLE_STEP = 1
 
 def main():
     """Start the main program running."""
@@ -151,6 +161,58 @@ def timer(alarm):
         advance()
         glutPostRedisplay()
 
+    if animateTan:
+        # Advance to the next frame
+        advanceTan()
+        glutPostRedisplay()
+
+    if animateSilver:
+        # Advance to the next frame
+        advanceSilver()
+        glutPostRedisplay()
+
+    if animateDice:
+        # Advance to the next frame
+        advanceDice()
+        glutPostRedisplay()
+        
+# Advance the scene one frame
+def advanceTan():
+    """Advance the scene one frame."""
+    global tanBallX, speed
+    tanBallX += speed
+    if tanBallX <= -4:
+        # Reached the bottom - switch directions
+        tanBallX = -4
+        speed = -speed
+    elif tanBallX >= 2.8:
+        # Reached the top - switch directions
+        tanBallX = 2.8
+        speed = -speed
+
+# Advance the scene one frame
+def advanceSilver():
+    """Advance the scene one frame."""
+    global silverBallX, silverSpeed
+    silverBallX += silverSpeed
+    if silverBallX <= -4:
+        # Reached the bottom - switch directions
+        silverBallX = -4
+        silverSpeed = -silverSpeed
+    elif silverBallX >= 2.8:
+        # Reached the top - switch directions
+        silverBallX = 2.8
+        silverSpeed = -silverSpeed
+
+# Advance the scene one frame
+def advanceDice():
+    """Advance the scene one frame."""
+    global diceAngle, ANGLE_STEP, counter, animateDice
+    if counter >= 300: 
+        animateDice = False # stop the animation after a few seconds  
+    diceAngle += ANGLE_STEP
+    counter += 1
+  
 def advance():
     """Advance the scene one frame."""
     global angle_movement, bullet_distance, fire, time
@@ -160,6 +222,7 @@ def advance():
         angle_movement -= 360   # So angle doesn't get too large.
     elif angle_movement < 0:
         angle_movement += 360   # So angle doesn't get too small.
+
 
         
 def special_keys(key, x, y):
@@ -242,6 +305,16 @@ def keyboard(key, x, y):
         # Move light up
         light_height += light_height_dy
         glutPostRedisplay()
+    elif key == b'7':
+        global animateDice, counter
+        counter = 0
+        animateDice = not animateDice
+    elif key == b'8':
+        global animateTan
+        animateTan = not animateTan
+    elif key == b'9':
+        global animateSilver
+        animateSilver = not animateSilver
 
 def drawPlane(width, height, texture):
     """ Draw a textured plane of the specified dimension. """
@@ -322,6 +395,18 @@ def draw_objects():
     """Draw the objects in the scene: cylinders, spheres, and floor."""
 
     glPushMatrix()
+
+    glPushMatrix()
+    glTranslate(tanBallX, 3.2, 0)
+    set_copper(GL_FRONT_AND_BACK) # tan texture
+    gluSphere(ball, 0.2, 20, 20) # draw the tan ball
+    glPopMatrix()
+
+    glPushMatrix()
+    glTranslate(silverBallX, 3.2, 1.5)
+    set_pewter(GL_FRONT_AND_BACK) # white texture
+    gluSphere(ball, 0.2, 20, 20) # draw the white ball
+    glPopMatrix()
 
     glPushMatrix()
     drawFloor(PLANE_WIDTH, PLANE_HEIGHT, checkerBoardName)
@@ -433,7 +518,54 @@ def drawFloor(width, height, texture):
     glEnd()
 
     glDisable(GL_TEXTURE_2D)
+    
+def set_copper(face):
+    """Set the material properties of the given face to "copper"-esque.
 
+    Keyword arguments:
+    face -- which face (GL_FRONT, GL_BACK, or GL_FRONT_AND_BACK)
+    """
+    ambient = [ 0.19125, 0.0735, 0.0225, 1.0 ]
+    diffuse = [ 0.7038, 0.27048, 0.0828, 1.0 ]
+    specular = [ 0.256777, 0.137622, 0.086014, 1.0 ]
+    shininess = 128.0
+    glMaterialfv(face, GL_AMBIENT, ambient);
+    glMaterialfv(face, GL_DIFFUSE, diffuse);
+    glMaterialfv(face, GL_SPECULAR, specular);
+    glMaterialf(face, GL_SHININESS, shininess);
+
+def set_silver(face):
+    """Set the material properties of the given face to "silver"-esque.
+
+    Keyword arguments:
+    face -- which face (GL_FRONT, GL_BACK, or GL_FRONT_AND_BACK)
+    """
+    
+    ambient = [ 0.19225, 0.19225, 0.19225, 1.0 ]
+    diffuse = [ 0.50754, 0.50754, 0.50754, 1.0 ]
+    specular = [ 0.508273, 0.508273, 0.508273, 1.0 ]
+    shininess = 10
+    glMaterialfv(face, GL_AMBIENT, ambient);
+    glMaterialfv(face, GL_DIFFUSE, diffuse);
+    glMaterialfv(face, GL_SPECULAR, specular);
+    glMaterialf(face, GL_SHININESS, shininess);
+
+# only used for testing silver texture
+
+def set_pewter(face):
+    """Set the material properties of the given face to "pewter"-esque.
+
+    Keyword arguments:
+    face -- which face (GL_FRONT, GL_BACK, or GL_FRONT_AND_BACK)
+    """
+    ambient = [ 0.10588, 0.058824, 0.113725, 1.0 ]
+    diffuse = [ 0.427451, 0.470588, 0.541176, 1.0 ]
+    specular = [ 0.3333, 0.3333, 0.521569, 1.0 ]
+    shininess = 9.84615
+    glMaterialfv(face, GL_AMBIENT, ambient);
+    glMaterialfv(face, GL_DIFFUSE, diffuse);
+    glMaterialfv(face, GL_SPECULAR, specular);
+    glMaterialf(face, GL_SHININESS, shininess);
 def place_blue_light():
     """Set up the main light."""
     glMatrixMode(GL_MODELVIEW)
